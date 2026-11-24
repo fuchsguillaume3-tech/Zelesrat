@@ -1,26 +1,317 @@
 
-ZELESTAT
-ROLEPLAY • SURVIVAL
-SANTÉ 100
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>ZELESTAT RP - Survival</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#101411;color:#eee;font-family:Arial,sans-serif}
+header{background:#202820;padding:14px;text-align:center;border-bottom:2px solid #a52d2d}
+h1{margin:0;color:#d33;font-size:27px;letter-spacing:4px}
+header p{margin:5px;color:#aaa;font-size:11px;letter-spacing:2px}
+.stats{display:flex;justify-content:space-around;background:#202820;padding:12px;font-size:13px}
+.stat{width:30%;text-align:center}
+.bar{height:9px;background:#444;margin-top:5px;border-radius:8px;overflow:hidden}
+.fill{height:100%;transition:width .2s}
+#health{background:#d22;width:100%}
+#stamina{background:#d9b32c;width:100%}
+#map{position:relative;margin:12px auto;width:calc(100% - 24px);height:390px;background:#333d35;border:2px solid #65705e;border-radius:8px;overflow:hidden}
+canvas{width:100%;height:100%;display:block}
+#info{margin:12px;background:#202820;padding:12px;border-radius:7px;min-height:65px;font-size:14px;line-height:1.5}
+.actions{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:12px}
+button{background:#343f35;color:white;border:1px solid #66715e;border-radius:7px;padding:14px 5px;font-size:14px;font-weight:bold;cursor:pointer;touch-action:manipulation}
+button:active{background:#8d2929}
+#controls{display:grid;grid-template-columns:repeat(3,65px);justify-content:center;gap:5px;margin:10px}
+#controls button{height:55px;font-size:22px}
+#inventory{background:#202820;margin:12px;padding:12px;border-radius:7px;font-size:13px}
+#inventory h3{margin-top:0;color:#d6b46a}
+footer{text-align:center;color:#777;font-size:11px;padding:20px}
+</style>
+</head>
+<body>
 
-ENDURANCE 100
+<header>
+<h1>ZELESTAT</h1>
+<p>ROLEPLAY • SURVIVAL • ALSACE</p>
+</header>
 
-JOUR 1 · 22:40
-CENTRE-VILLE — SÉLESTAT
+<div class="stats">
+<div class="stat">❤️ SANTÉ <b id="hp">100</b>
+<div class="bar"><div class="fill" id="health"></div></div></div>
+<div class="stat">⚡ ENDURANCE <b id="sp">100</b>
+<div class="bar"><div class="fill" id="stamina"></div></div></div>
+<div class="stat">🕒 JOUR <b id="day">1</b><br><small id="clock">22:40</small></div>
+</div>
 
-Explore les rues et approche-toi des bâtiments ou véhicules
+<div id="map">
+<canvas id="game"></canvas>
+</div>
 
-SAC À DOS
-Vide
-GLISSE À DROITE POUR REGARDER
-WASD / FLÈCHES SUR CLAVIER
+<div id="info">
+Bienvenue à Sélestat. La ville est tombée.
+Explore les rues, fouille les bâtiments et tente de survivre.
+</div>
 
-COURIR
-FOUILLER
-FRAPPER
-SAC
-ZELESTAT
-SÉLESTAT, ALSACE — JOUR 1
-La ville est tombée. Les rues sont silencieuses, les commerces abandonnés et les rôdeurs errent dans le brouillard. Trouve de quoi survivre, fouille les véhicules et progresse quartier par quartier.
-Objectif : explorer les 4 secteurs, récupérer des ressources et éviter les zombies. Sur mobile : joystick à gauche, glisse à droite pour tourner. Sur ordinateur : ZQSD/WASD et souris.
-ENTRER DANS LA VILLE
+<div id="controls">
+<div></div><button onclick="move(0,-1)">▲</button><div></div>
+<button onclick="move(-1,0)">◀</button>
+<button onclick="move(0,1)">▼</button>
+<button onclick="move(1,0)">▶</button>
+</div>
+
+<div class="actions">
+<button onclick="search()">🔎 FOUILLER</button>
+<button onclick="attack()">🔪 FRAPPER</button>
+<button onclick="run()">🏃 COURIR</button>
+<button onclick="rest()">💤 REPOS</button>
+<button onclick="enter()">🏚️ ENTRER</button>
+<button onclick="useBag()">🎒 SAC</button>
+</div>
+
+<div id="inventory">
+<h3>🎒 INVENTAIRE</h3>
+<div id="items">Sac vide</div>
+<p id="weapon">Arme : aucune</p>
+</div>
+
+<footer>ZELESTAT RP • SÉLESTAT, ALSACE • SURVIVEZ ENSEMBLE</footer>
+
+<script>
+const canvas=document.getElementById("game");
+const ctx=canvas.getContext("2d");
+
+let player={x:2,y:2,hp:100,sp:100};
+let items={nourriture:0,bandages:0,munitions:0};
+let weapon="Aucune";
+let day=1,minutes=22*60+40;
+let zombies=[];
+let message="Explore les rues de Sélestat.";
+let searched={};
+let buildings=[
+{x:1,y:1,name:"Pharmacie",loot:"bandages"},
+{x:5,y:1,name:"Supermarché",loot:"nourriture"},
+{x:8,y:3,name:"Armurerie",loot:"munitions"},
+{x:2,y:7,name:"Commissariat",loot:"weapon"},
+{x:7,y:8,name:"Maison abandonnée",loot:"nourriture"}
+];
+
+function resize(){
+const r=canvas.getBoundingClientRect();
+canvas.width=r.width*devicePixelRatio;
+canvas.height=r.height*devicePixelRatio;
+draw();
+}
+window.addEventListener("resize",resize);
+
+function spawn(){
+zombies=[];
+for(let i=0;i<9;i++){
+zombies.push({
+x:Math.floor(Math.random()*10),
+y:Math.floor(Math.random()*10),
+hp:40
+});
+}
+}
+
+function draw(){
+let w=canvas.width,h=canvas.height;
+let cell=w/10;
+ctx.fillStyle="#41483e";
+ctx.fillRect(0,0,w,h);
+
+for(let y=0;y<10;y++){
+for(let x=0;x<10;x++){
+ctx.fillStyle=(x+y)%2?"#495346":"#414a3e";
+ctx.fillRect(x*cell,y*cell,cell,cell);
+}
+}
+
+// Routes
+ctx.fillStyle="#292d2b";
+for(let i=0;i<10;i++){
+ctx.fillRect(i*cell+cell*.35,0,cell*.3,h);
+ctx.fillRect(0,i*cell+cell*.35,w,cell*.3);
+}
+
+// Buildings
+buildings.forEach(b=>{
+ctx.fillStyle="#77776d";
+ctx.fillRect(b.x*cell+3,b.y*cell+3,cell-6,cell-6);
+ctx.fillStyle="#d4c6a2";
+ctx.font="10px Arial";
+ctx.textAlign="center";
+ctx.fillText("🏚",b.x*cell+cell/2,b.y*cell+cell*.65);
+});
+
+// Zombies
+zombies.forEach(z=>{
+ctx.font="19px Arial";
+ctx.textAlign="center";
+ctx.fillText("🧟",z.x*cell+cell/2,z.y*cell+cell*.7);
+});
+
+// Player
+ctx.font="24px Arial";
+ctx.fillText("🧍",player.x*cell+cell/2,player.y*cell+cell*.72);
+
+// Compass
+ctx.fillStyle="white";
+ctx.font="11px Arial";
+ctx.fillText("CENTRE-VILLE - SÉLESTAT",w/2,13);
+}
+
+function say(t){
+message=t;
+document.getElementById("info").textContent=t;
+}
+
+function update(){
+document.getElementById("hp").textContent=player.hp;
+document.getElementById("sp").textContent=player.sp;
+document.getElementById("health").style.width=player.hp+"%";
+document.getElementById("stamina").style.width=player.sp+"%";
+document.getElementById("day").textContent=day;
+document.getElementById("clock").textContent=
+String(Math.floor(minutes/60)%24).padStart(2,"0")+":"+
+String(minutes%60).padStart(2,"0");
+document.getElementById("items").textContent=
+"Nourriture : "+items.nourriture+
+" | Bandages : "+items.bandages+
+" | Munitions : "+items.munitions;
+document.getElementById("weapon").textContent="Arme : "+weapon;
+draw();
+}
+
+function time(){
+minutes+=10;
+if(minutes>=1440){minutes-=1440;day++}
+}
+
+function move(dx,dy){
+let nx=player.x+dx,ny=player.y+dy;
+if(nx<0||nx>9||ny<0||ny>9)return;
+player.x=nx;player.y=ny;
+player.sp=Math.max(0,player.sp-2);
+time();
+zombieTurn();
+say("Tu avances dans les rues de Sélestat...");
+update();
+}
+
+function zombieTurn(){
+zombies.forEach(z=>{
+let dist=Math.abs(z.x-player.x)+Math.abs(z.y-player.y);
+if(dist>1&&dist<6){
+if(Math.random()<.55){
+if(z.x<player.x)z.x++;
+else if(z.x>player.x)z.x--;
+else if(z.y<player.y)z.y++;
+else if(z.y>player.y)z.y--;
+}
+}
+if(dist<=1&&Math.random()<.35){
+player.hp-=8;
+say("Un zombie t'attaque ! Tu perds 8 points de santé.");
+}
+});
+if(player.hp<=0){
+player.hp=0;
+say("☠️ TU ES MORT. Recharge la page pour recommencer.");
+}
+}
+
+function search(){
+let key=player.x+"-"+player.y;
+if(searched[key]){
+say("Tu as déjà fouillé cet endroit.");
+return;
+}
+searched[key]=true;
+let r=Math.random();
+if(r<.4){items.nourriture++;say("Tu trouves de la nourriture !");}
+else if(r<.7){items.bandages++;say("Tu trouves des bandages !");}
+else if(r<.9){items.munitions+=5;say("Tu trouves 5 munitions !");}
+else{say("Rien d'intéressant. Le bâtiment est vide.");}
+time();
+zombieTurn();
+update();
+}
+
+function attack(){
+let z=zombies.find(z=>Math.abs(z.x-player.x)+Math.abs(z.y-player.y)<=1);
+if(!z){say("Aucun zombie à portée de frappe.");return}
+if(player.sp<10){say("Tu es trop fatigué pour frapper.");return}
+player.sp-=10;
+z.hp-=weapon==="Couteau"?35:20;
+if(z.hp<=0){
+zombies=zombies.filter(a=>a!==z);
+say("Zombie éliminé !");
+}else{
+say("Tu frappes le zombie ! Il est encore debout.");
+}
+time();
+zombieTurn();
+update();
+}
+
+function run(){
+if(player.sp<15){say("Tu n'as plus assez d'endurance.");return}
+player.sp-=15;
+let z=zombies.find(z=>Math.abs(z.x-player.x)+Math.abs(z.y-player.y)<=2);
+if(z){
+player.x=Math.max(0,Math.min(9,player.x+(player.x<=z.x?-1:1)));
+player.y=Math.max(0,Math.min(9,player.y+(player.y<=z.y?-1:1)));
+say("Tu cours pour échapper au zombie !");
+}else{
+say("Tu cours dans la rue.");
+}
+time();
+zombieTurn();
+update();
+}
+
+function rest(){
+player.sp=Math.min(100,player.sp+25);
+say("Tu reprends ton souffle.");
+time();
+zombieTurn();
+update();
+}
+
+function enter(){
+let b=buildings.find(b=>Math.abs(b.x-player.x)<=1&&Math.abs(b.y-player.y)<=1);
+if(!b){say("Aucun bâtiment accessible à proximité.");return}
+say("Tu entres dans : "+b.name+". Fouille les environs pour trouver des ressources.");
+}
+
+function useBag(){
+if(items.bandages>0&&player.hp<100){
+items.bandages--;
+player.hp=Math.min(100,player.hp+35);
+say("Tu utilises un bandage. Santé restaurée.");
+}else if(items.nourriture>0&&player.sp<100){
+items.nourriture--;
+player.sp=Math.min(100,player.sp+40);
+say("Tu manges. Ton endurance remonte.");
+}else{
+say("Ton sac ne contient rien d'utilisable pour le moment.");
+}
+update();
+}
+
+window.addEventListener("keydown",e=>{
+if(e.key==="ArrowUp"||e.key==="z")move(0,-1);
+if(e.key==="ArrowDown"||e.key==="s")move(0,1);
+if(e.key==="ArrowLeft"||e.key==="q")move(-1,0);
+if(e.key==="ArrowRight"||e.key==="d")move(1,0);
+});
+
+spawn();
+resize();
+update();
+</script>
+</body>
+</html>
