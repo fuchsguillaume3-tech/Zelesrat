@@ -4,7 +4,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ZELESTAT RP Survival</title>
+<title>ZELESTAT RP - Survival</title>
+
 <style>
 *{box-sizing:border-box}
 body{margin:0;background:#101411;color:white;font-family:Arial}
@@ -17,9 +18,9 @@ header p{color:#aaa;font-size:11px}
 .fill{height:100%;background:#d22;width:100%}
 #stamina{background:#d9b32c}
 #sceneBox{margin:12px;border:2px solid #65705e;border-radius:8px;overflow:hidden;position:relative}
-#scene{width:100%;height:440px;object-fit:cover;display:block}
+#scene{width:100%;height:55vh;min-height:350px;object-fit:cover;display:block}
 #sceneName{position:absolute;top:10px;left:10px;background:#111d;padding:8px;border-radius:5px}
-#info{background:#202820;margin:12px;padding:15px;border-radius:7px;min-height:70px;line-height:1.5}
+#info{background:#202820;margin:12px;padding:15px;border-radius:7px;min-height:75px;line-height:1.5}
 .actions{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;padding:12px}
 button{background:#343f35;color:white;border:1px solid #66715e;border-radius:7px;padding:15px 5px;font-weight:bold;font-size:14px}
 button:active{background:#922}
@@ -28,6 +29,7 @@ h3{color:#d6b46a}
 footer{text-align:center;color:#777;padding:20px;font-size:11px}
 </style>
 </head>
+
 <body>
 
 <header>
@@ -36,11 +38,20 @@ footer{text-align:center;color:#777;padding:20px;font-size:11px}
 </header>
 
 <div class="stats">
-<div class="stat">❤️ SANTÉ <b id="hp">100</b>
-<div class="bar"><div class="fill" id="health"></div></div></div>
-<div class="stat">⚡ ENDURANCE <b id="sp">100</b>
-<div class="bar"><div class="fill" id="stamina"></div></div></div>
-<div class="stat">🕒 JOUR <b id="day">1</b><br><span id="clock">22:40</span></div>
+<div class="stat">
+❤️ SANTÉ <b id="hp">100</b>
+<div class="bar"><div class="fill" id="health"></div></div>
+</div>
+
+<div class="stat">
+⚡ ENDURANCE <b id="sp">100</b>
+<div class="bar"><div class="fill" id="stamina"></div></div>
+</div>
+
+<div class="stat">
+🕒 JOUR <b id="day">1</b>
+<br><span id="clock">22:40</span>
+</div>
 </div>
 
 <div id="sceneBox">
@@ -52,6 +63,8 @@ footer{text-align:center;color:#777;padding:20px;font-size:11px}
 Tu arrives à Sélestat. La ville est tombée.
 Explore les rues et tente de survivre.
 </div>
+
+<div id="hotspots" class="actions"></div>
 
 <div class="actions">
 <button onclick="advance()">➡️ AVANCER</button>
@@ -67,34 +80,43 @@ Explore les rues et tente de survivre.
 <div id="items">Nourriture : 0 | Bandages : 0</div>
 </div>
 
-<footer>ZELESTAT RP • SÉLESTAT ALSACE</footer>
+<footer>
+ZELESTAT RP • SÉLESTAT ALSACE
+</footer>
 
 <script>
+
 const scenes=[
 {
 name:"Entrée de Sélestat",
 image:"scene1.jpg",
 text:"Le panneau annonce Sélestat. Un rôdeur erre près de la route. La ville semble abandonnée.",
-loot:"Tu trouves une bouteille d'eau dans une voiture abandonnée."
+choices:["Examiner le panneau","Regarder la voiture abandonnée"],
+loot:"Tu trouves une bouteille d'eau et des provisions."
 },
 {
 name:"Rue commerçante",
 image:"scene2.jpg",
 text:"Tu arrives dans les rues commerçantes. Les vitrines sont brisées. Des zombies errent dans la rue.",
-loot:"Tu trouves quelques conserves dans une boutique."
+choices:["Fouiller la boutique","Écouter les bruits de la rue"],
+loot:"Tu trouves des conserves dans une boutique."
 },
 {
 name:"Tour de Sélestat",
 image:"scene3.jpg",
 text:"La tour apparaît devant toi. Une barricade semble protéger quelques survivants.",
-loot:"Tu récupères des bandages près de la barricade."
+choices:["Examiner la barricade","Chercher un passage sûr"],
+loot:"Tu trouves une trousse de secours."
 }
 ];
 
 let step=0;
-let hp=100,sp=100;
-let day=1,minutes=1360;
-let food=0,bandages=0;
+let hp=100;
+let sp=100;
+let day=1;
+let minutes=1360;
+let food=0;
+let bandages=0;
 let searched={};
 
 function say(t){
@@ -107,9 +129,11 @@ document.getElementById("sp").textContent=sp;
 document.getElementById("health").style.width=hp+"%";
 document.getElementById("stamina").style.width=sp+"%";
 document.getElementById("day").textContent=day;
+
 document.getElementById("clock").textContent=
 String(Math.floor(minutes/60)%24).padStart(2,"0")+":"+
 String(minutes%60).padStart(2,"0");
+
 document.getElementById("items").textContent=
 "Nourriture : "+food+" | Bandages : "+bandages;
 }
@@ -118,11 +142,32 @@ function showScene(){
 document.getElementById("scene").src=scenes[step].image;
 document.getElementById("sceneName").textContent=
 scenes[step].name+" ("+(step+1)+"/3)";
-say(scenes[step].text);
+
+let box=document.getElementById("hotspots");
+box.innerHTML="";
+
+scenes[step].choices.forEach((choice,i)=>{
+let b=document.createElement("button");
+b.textContent="📍 "+choice;
+
+b.onclick=function(){
+if(i===0){
+say(scenes[step].loot);
+if(step===2)bandages++;
+else food++;
+update();
+}else{
+say("Tu observes les alentours. Un chemin semble encore praticable.");
+}
+};
+
+box.appendChild(b);
+});
+
 update();
 }
 
-function time(){
+function tick(){
 minutes+=10;
 if(minutes>=1440){
 minutes-=1440;
@@ -131,14 +176,15 @@ day++;
 }
 
 function advance(){
-if(step>=scenes.length-1){
-say("Tu as atteint la barricade de Sélestat. Fin de cette aventure !");
-return;
-}
+if(step<scenes.length-1){
 step++;
 sp=Math.max(0,sp-5);
-time();
+tick();
 showScene();
+say(scenes[step].text);
+}else{
+say("Tu as atteint la barricade de Sélestat. Fin de cette aventure !");
+}
 }
 
 function search(){
@@ -146,14 +192,18 @@ if(searched[step]){
 say("Tu as déjà fouillé cet endroit.");
 return;
 }
+
 searched[step]=true;
+
 if(step===2){
 bandages++;
+say("Tu récupères une trousse de secours.");
 }else{
 food++;
+say("Tu récupères des provisions.");
 }
-say(scenes[step].loot);
-time();
+
+tick();
 update();
 }
 
@@ -163,7 +213,7 @@ say(scenes[step].text);
 
 function rest(){
 sp=Math.min(100,sp+25);
-time();
+tick();
 say("Tu reprends ton souffle.");
 update();
 }
@@ -173,11 +223,13 @@ if(bandages>0&&hp<100){
 bandages--;
 hp=Math.min(100,hp+35);
 say("Tu utilises un bandage. Santé restaurée.");
-}else if(food>0&&sp<100){
+}
+else if(food>0&&sp<100){
 food--;
 sp=Math.min(100,sp+35);
 say("Tu manges. Ton endurance remonte.");
-}else{
+}
+else{
 say("Tu n'as rien à utiliser.");
 }
 update();
@@ -193,10 +245,12 @@ food=0;
 bandages=0;
 searched={};
 showScene();
+say(scenes[0].text);
 }
 
 showScene();
+say(scenes[0].text);
+
 </script>
 </body>
 </html>
-
