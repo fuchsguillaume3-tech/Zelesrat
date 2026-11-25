@@ -3,254 +3,262 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ZELESTAT RP - Survival</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Sélestat Zombie Map</title>
 
 <style>
 *{box-sizing:border-box}
-body{margin:0;background:#101411;color:white;font-family:Arial}
-header{text-align:center;background:#202820;padding:15px;border-bottom:2px solid #a22}
-h1{color:#d33;letter-spacing:5px;margin:0}
-header p{color:#aaa;font-size:11px}
-.stats{display:flex;justify-content:space-around;background:#202820;padding:12px;font-size:13px}
-.stat{text-align:center;width:30%}
-.bar{height:8px;background:#444;margin-top:5px;border-radius:8px;overflow:hidden}
-.fill{height:100%;background:#d22;width:100%}
-#stamina{background:#d9b32c}
-#sceneBox{margin:12px;border:2px solid #65705e;border-radius:8px;overflow:hidden;position:relative}
-#scene{width:100%;height:55vh;min-height:350px;object-fit:cover;display:block}
-#sceneName{position:absolute;top:10px;left:10px;background:#111d;padding:8px;border-radius:5px}
-#info{background:#202820;margin:12px;padding:15px;border-radius:7px;min-height:75px;line-height:1.5}
-.actions{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;padding:12px}
-button{background:#343f35;color:white;border:1px solid #66715e;border-radius:7px;padding:15px 5px;font-weight:bold;font-size:14px}
-button:active{background:#922}
-#inventory{background:#202820;margin:12px;padding:12px;border-radius:7px}
-h3{color:#d6b46a}
-footer{text-align:center;color:#777;padding:20px;font-size:11px}
+body{
+ margin:0;background:#151b20;color:white;
+ font-family:Arial,sans-serif;
+}
+header{
+ background:#202a30;padding:14px;
+ text-align:center;
+}
+h2{margin:0 0 5px}
+.controls{
+ display:flex;flex-wrap:wrap;gap:7px;
+ padding:10px;background:#263238;
+}
+button,select{
+ padding:10px;border:0;border-radius:6px;
+ background:#46545c;color:white;font-weight:bold;
+}
+button:active{background:#84cc16}
+#viewport{
+ width:100%;height:72vh;overflow:auto;
+ background:#111;
+ touch-action:pan-x pan-y;
+}
+#map{
+ position:relative;width:100%;line-height:0;
+}
+#map img{
+ width:100%;height:auto;display:block;
+ pointer-events:none;
+}
+#pawns{
+ position:absolute;inset:0;
+}
+.pawn{
+ position:absolute;
+ transform:translate(-50%,-50%);
+ width:36px;height:36px;
+ border:3px solid white;
+ border-radius:50%;
+ display:flex;align-items:center;
+ justify-content:center;
+ font-weight:bold;font-size:17px;
+ color:#111;cursor:grab;
+ touch-action:none;
+ line-height:normal;
+ user-select:none;
+}
+.blue{background:#38bdf8}
+.red{background:#ef4444}
+.green{background:#4ade80}
+.yellow{background:#facc15}
+#list{padding:12px}
+.item{
+ display:flex;justify-content:space-between;
+ align-items:center;padding:8px;
+ background:#263238;margin:5px 0;
+ border-radius:6px;
+}
+.item button{padding:5px 10px}
 </style>
 </head>
 
 <body>
 
 <header>
-<h1>ZELESTAT</h1>
-<p>ROLEPLAY • SURVIVAL • ALSACE</p>
+<h2>🧟 SÉLESTAT SURVIVAL</h2>
+<div>Carte interactive Project Zomboid</div>
 </header>
 
-<div class="stats">
-<div class="stat">
-❤️ SANTÉ <b id="hp">100</b>
-<div class="bar"><div class="fill" id="health"></div></div>
+<div class="controls">
+
+<select id="mapChoice" onchange="changeMap()">
+<option value="selestat-aerienne.jpg">Vue satellite</option>
+<option value="parcours-arbres.jpg">Plan de Sélestat</option>
+</select>
+
+<button onclick="addPawn('blue')">+ Survivant</button>
+<button onclick="addPawn('red')">+ Zombie</button>
+<button onclick="addPawn('green')">+ Groupe</button>
+<button onclick="addPawn('yellow')">+ Objectif</button>
+
+<button onclick="zoom(1.2)">Zoom +</button>
+<button onclick="zoom(0.8)">Zoom -</button>
+<button onclick="resetZoom()">Reset</button>
+
 </div>
 
-<div class="stat">
-⚡ ENDURANCE <b id="sp">100</b>
-<div class="bar"><div class="fill" id="stamina"></div></div>
+<div id="viewport">
+ <div id="map">
+  <img id="mapImage" src="selestat-aerienne.jpg">
+  <div id="pawns"></div>
+ </div>
 </div>
 
-<div class="stat">
-🕒 JOUR <b id="day">1</b>
-<br><span id="clock">22:40</span>
+<div id="list">
+<h3>📍 Gestion des pions</h3>
+<div id="pawnList"></div>
+<button onclick="clearPawns()" style="background:#a32626">
+Supprimer tous les pions
+</button>
 </div>
-</div>
-
-<div id="sceneBox">
-<img id="scene" src="0DC1D7C7-350A-4E1A-9A96-37EFE2F39E2F.png" alt="Sélestat zombie">
-<div id="sceneName">Entrée de Sélestat</div>
-</div>
-
-<div id="info">
-Tu arrives à Sélestat. La ville est tombée.
-Explore les rues et tente de survivre.
-</div>
-
-<div id="hotspots" class="actions"></div>
-
-<div class="actions">
-<button onclick="advance()">➡️ AVANCER</button>
-<button onclick="search()">🔎 FOUILLER</button>
-<button onclick="observe()">👁️ OBSERVER</button>
-<button onclick="rest()">💤 REPOS</button>
-<button onclick="useBag()">🎒 UTILISER LE SAC</button>
-<button onclick="restart()">↻ RECOMMENCER</button>
-</div>
-
-<div id="inventory">
-<h3>🎒 INVENTAIRE</h3>
-<div id="items">Nourriture : 0 | Bandages : 0</div>
-</div>
-
-<footer>
-ZELESTAT RP • SÉLESTAT ALSACE
-</footer>
 
 <script>
 
-const scenes=[
-{
-name:"Entrée de Sélestat",
-image:"0DC1D7C7-350A-4E1A-9A96-37EFE2F39E2F.png",
-text:"Le panneau annonce Sélestat. Un rôdeur erre près de la route. La ville semble abandonnée.",
-choices:["Examiner le panneau","Regarder la voiture abandonnée"],
-loot:"Tu trouves une bouteille d'eau et des provisions."
-},
-{
-name:"Rue commerçante",
-image:"scene2.jpg",
-text:"Tu arrives dans les rues commerçantes. Les vitrines sont brisées. Des zombies errent dans la rue.",
-choices:["Fouiller la boutique","Écouter les bruits de la rue"],
-loot:"Tu trouves des conserves dans une boutique."
-},
-{
-name:"Tour de Sélestat",
-image:"scene3.jpg",
-text:"La tour apparaît devant toi. Une barricade semble protéger quelques survivants.",
-choices:["Examiner la barricade","Chercher un passage sûr"],
-loot:"Tu trouves une trousse de secours."
-}
-];
+let pawns=[];
+let counter=1;
+let scale=1;
 
-let step=0;
-let hp=100;
-let sp=100;
-let day=1;
-let minutes=1360;
-let food=0;
-let bandages=0;
-let searched={};
+try{
+ pawns=JSON.parse(localStorage.getItem("selestatPawns")||"[]");
+ counter=Math.max(0,...pawns.map(p=>p.id))+1;
+}catch(e){pawns=[];}
 
-function say(t){
-document.getElementById("info").textContent=t;
-}
-
-function update(){
-document.getElementById("hp").textContent=hp;
-document.getElementById("sp").textContent=sp;
-document.getElementById("health").style.width=hp+"%";
-document.getElementById("stamina").style.width=sp+"%";
-document.getElementById("day").textContent=day;
-
-document.getElementById("clock").textContent=
-String(Math.floor(minutes/60)%24).padStart(2,"0")+":"+
-String(minutes%60).padStart(2,"0");
-
-document.getElementById("items").textContent=
-"Nourriture : "+food+" | Bandages : "+bandages;
-}
-
-function showScene(){
-document.getElementById("scene").src=scenes[step].image;
-document.getElementById("sceneName").textContent=
-scenes[step].name+" ("+(step+1)+"/3)";
-
-let box=document.getElementById("hotspots");
-box.innerHTML="";
-
-scenes[step].choices.forEach((choice,i)=>{
-let b=document.createElement("button");
-b.textContent="📍 "+choice;
-
-b.onclick=function(){
-if(i===0){
-say(scenes[step].loot);
-if(step===2)bandages++;
-else food++;
-update();
-}else{
-say("Tu observes les alentours. Un chemin semble encore praticable.");
-}
+const types={
+ blue:{icon:"S",name:"Survivant"},
+ red:{icon:"Z",name:"Zombie"},
+ green:{icon:"G",name:"Groupe"},
+ yellow:{icon:"!",name:"Objectif"}
 };
 
-box.appendChild(b);
-});
-
-update();
+function save(){
+ localStorage.setItem("selestatPawns",JSON.stringify(pawns));
+ render();
 }
 
-function tick(){
-minutes+=10;
-if(minutes>=1440){
-minutes-=1440;
-day++;
-}
+function changeMap(){
+ document.getElementById("mapImage").src=
+ document.getElementById("mapChoice").value;
 }
 
-function advance(){
-if(step<scenes.length-1){
-step++;
-sp=Math.max(0,sp-5);
-tick();
-showScene();
-say(scenes[step].text);
-}else{
-say("Tu as atteint la barricade de Sélestat. Fin de cette aventure !");
-}
-}
-
-function search(){
-if(searched[step]){
-say("Tu as déjà fouillé cet endroit.");
-return;
+function addPawn(type){
+ pawns.push({
+  id:counter++,
+  type:type,
+  x:50,
+  y:50,
+  name:types[type].name
+ });
+ save();
 }
 
-searched[step]=true;
+function render(){
 
-if(step===2){
-bandages++;
-say("Tu récupères une trousse de secours.");
-}else{
-food++;
-say("Tu récupères des provisions.");
-}
+ const container=document.getElementById("pawns");
+ container.innerHTML="";
 
-tick();
-update();
-}
+ pawns.forEach(p=>{
 
-function observe(){
-say(scenes[step].text);
-}
+  let el=document.createElement("div");
+  el.className="pawn "+p.type;
+  el.textContent=types[p.type].icon;
+  el.style.left=p.x+"%";
+  el.style.top=p.y+"%";
 
-function rest(){
-sp=Math.min(100,sp+25);
-tick();
-say("Tu reprends ton souffle.");
-update();
-}
+  let dragging=false;
 
-function useBag(){
-if(bandages>0&&hp<100){
-bandages--;
-hp=Math.min(100,hp+35);
-say("Tu utilises un bandage. Santé restaurée.");
-}
-else if(food>0&&sp<100){
-food--;
-sp=Math.min(100,sp+35);
-say("Tu manges. Ton endurance remonte.");
-}
-else{
-say("Tu n'as rien à utiliser.");
-}
-update();
-}
+  el.addEventListener("pointerdown",e=>{
+   e.preventDefault();
+   dragging=true;
+   el.setPointerCapture(e.pointerId);
+  });
 
-function restart(){
-step=0;
-hp=100;
-sp=100;
-day=1;
-minutes=1360;
-food=0;
-bandages=0;
-searched={};
-showScene();
-say(scenes[0].text);
+  el.addEventListener("pointermove",e=>{
+   if(!dragging)return;
+
+   const rect=document.getElementById("map").getBoundingClientRect();
+
+   p.x=Math.max(0,Math.min(100,
+    (e.clientX-rect.left)/rect.width*100));
+
+   p.y=Math.max(0,Math.min(100,
+    (e.clientY-rect.top)/rect.height*100));
+
+   el.style.left=p.x+"%";
+   el.style.top=p.y+"%";
+  });
+
+  el.addEventListener("pointerup",()=>{
+   dragging=false;
+   localStorage.setItem("selestatPawns",JSON.stringify(pawns));
+  });
+
+  el.addEventListener("dblclick",()=>{
+   renamePawn(p.id);
+  });
+
+  container.appendChild(el);
+ });
+
+ renderList();
 }
 
-showScene();
-say(scenes[0].text);
+function renderList(){
+
+ const list=document.getElementById("pawnList");
+ list.innerHTML="";
+
+ pawns.forEach(p=>{
+
+  let item=document.createElement("div");
+  item.className="item";
+
+  let name=document.createElement("span");
+  name.textContent=types[p.type].name+" : "+p.name;
+
+  let edit=document.createElement("button");
+  edit.textContent="✏️";
+  edit.onclick=()=>renamePawn(p.id);
+
+  let del=document.createElement("button");
+  del.textContent="❌";
+  del.onclick=()=>{
+   pawns=pawns.filter(x=>x.id!==p.id);
+   save();
+  };
+
+  item.append(name,edit,del);
+  list.appendChild(item);
+ });
+}
+
+function renamePawn(id){
+ let p=pawns.find(x=>x.id===id);
+ if(!p)return;
+ let name=prompt("Nom du pion :",p.name);
+ if(name && name.trim()){
+  p.name=name.trim();
+  save();
+ }
+}
+
+function clearPawns(){
+ if(confirm("Supprimer tous les pions ?")){
+  pawns=[];
+  save();
+ }
+}
+
+function zoom(value){
+ scale=Math.max(0.5,Math.min(3,scale*value));
+ document.getElementById("map").style.width=(scale*100)+"%";
+}
+
+function resetZoom(){
+ scale=1;
+ document.getElementById("map").style.width="100%";
+}
+
+render();
 
 </script>
+
 </body>
 </html>
